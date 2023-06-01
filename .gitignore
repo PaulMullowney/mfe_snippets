@@ -1,1 +1,2 @@
-cmake_omp_cce15/build.*
+*/build*
+.vscode
