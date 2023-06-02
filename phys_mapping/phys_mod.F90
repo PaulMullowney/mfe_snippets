@@ -25,8 +25,8 @@ contains
 
 subroutine phys_kernel_LITE_LOOP(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1)
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1, out1
 #ifdef OPENACC
 !$acc routine vector
 #endif
@@ -43,8 +43,8 @@ end subroutine phys_kernel_LITE_LOOP
 
 subroutine phys_kernel_LITE_LOOP_REVERSED(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1)
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1, out1
 
   integer(kind=ip) :: i,k
 #ifdef OPENACC
@@ -66,8 +66,8 @@ end subroutine phys_kernel_LITE_LOOP_REVERSED
 
 subroutine phys_kernel_LITE_LOOP_REVERSED_HOIST(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1, i)
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2, i
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1, out1
 
   integer(kind=ip) :: k
 #ifdef OPENACC
@@ -82,8 +82,8 @@ end subroutine phys_kernel_LITE_LOOP_REVERSED_HOIST
 
 subroutine phys_kernel_VERT_SEARCH(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1)
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,out1
 
   integer(kind=ip) :: i,k
   real(kind=lp) :: temp(i1:i2)
@@ -119,8 +119,8 @@ end subroutine phys_kernel_VERT_SEARCH
 
 subroutine phys_kernel_NASTY_EXPS(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1)
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,out1
 
   integer(kind=ip) :: i,k
   real(kind=lp) :: temp_s1, temp_s2
@@ -148,8 +148,8 @@ end subroutine phys_kernel_NASTY_EXPS
 
 subroutine phys_kernel_LU_SOLVER(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1)
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,out1
 
   integer(kind=ip) :: i,k
   real(kind=lp),dimension(dim1,nspecies,nspecies) :: lu_lhs, lu_rhs_implicit
@@ -292,8 +292,8 @@ end subroutine phys_kernel_LU_SOLVER
 subroutine phys_kernel_LU_SOLVER_COMPACT(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,in6,in7,in8,in9,in10, out1)
   ! To satisfy my curiosity, flip the allocation of the matrix to be compact for each grid point.
   integer(kind=ip),intent(in) :: dim1, dim2, i1,i2
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,in2,in3,in4,in5,in6,in7,in8,in9,in10
-  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: out1
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+  real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1,out1
 
   integer(kind=ip) :: i,k
   ! Invert the matrix allocation, so that parallel dim is outermost
