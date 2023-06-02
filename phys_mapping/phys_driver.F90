@@ -119,6 +119,8 @@ end do
 
 ! Data offload
 #ifdef OMP_DEVICE
+print *, "Number of available devices", omp_get_num_devices()
+
 !$omp target data map(tofrom:arr1) map(to:arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10) map(from:out1)
 #elif defined(OPENACC)
 !$acc data copy(arr1) copyin(arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10) copyout(out1)
