@@ -32,7 +32,7 @@ num_main_loops = 8
 
 ! Defaults
 nproma = __NPROMA__
-ntotal = __NPROMA__*16384
+ntotal = 64*16384
 
 iargs = command_argument_count()
 if (iargs >= 1) then
@@ -45,7 +45,7 @@ if (iargs >= 1) then
    endif
 endif
 npoints = nproma  ! Can be unlocked later...
-nblocks = ntotal / nproma + 1
+nblocks = ntotal / nproma
 write(*, '(A8,I8,A8,I8,A8,I8,A)') 'NPROMA ', nproma, "TOTAL ", ntotal, "NBLOCKS", nblocks
 
 #ifdef FLOAT32

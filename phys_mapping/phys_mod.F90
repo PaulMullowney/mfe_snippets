@@ -51,6 +51,8 @@ subroutine phys_kernel_LITE_LOOP_REVERSED(dim1,dim2,i1,i2, in1,in2,in3,in4,in5,i
 !$acc routine vector
 
 !$acc loop vector private(i, k)
+#elif defined(OMP_DEVICE)
+!$omp parallel do simd
 #endif
   do i=i1,i2
     do k=1,dim2
@@ -72,6 +74,8 @@ subroutine phys_kernel_LITE_LOOP_REVERSED_HOIST(dim1,dim2,i1,i2, in1,in2,in3,in4
   integer(kind=ip) :: k
 #ifdef OPENACC
 !$acc routine seq
+#elif defined(OMP_DEVICE)
+!$omp parallel do simd
 #endif
     do k=1,dim2
       out1(i,k) = (in1(i,k) + in2(i,k) + in3(i,k) + in4(i,k) + in5(i,k) + &
