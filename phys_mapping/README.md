@@ -1,5 +1,43 @@
 # Mapping LITE_LOOP to GPU execution units
 
+In our physics, the control flow after GPU adaptation is, very simplified, as follows:
+
+```f90
+!$acc parallel loop gang vector_length(block_size)
+! -or- !$omp target teams distribute num_threads(block_size)
+do iblock=1,nblock
+  call vector_routine(1, block_size, ...)
+end do
+```
+
+with the vector routines exposing another level of parallelism as
+
+```f90
+subroutine vector_routine(istart, iend, ...)
+!$acc routine vector
+! -or- !$omp target declare
+!$acc loop vector
+! -or- !$omp parallel do simd
+do i=istart, iend
+  do k=1,nlev
+  ...
+  end do
+end do
+end subroutine
+```
+
+with a fairly substantial amount of compute inside the vector loop but, notably, no data dependencies between loop iterations. Performance is limited by register file pressure due to temporaries in the kernel. More complex variants of this control flow exist in the real code and consist of multiple calls to vector routines from the same block loop, and/or nested calls inside the vector routine, which occasionally split the vector loop.
+
+In our proxy mini-app CLOUDSC (https://github.com/ecmwf-ifs/dwarf-p-cloudsc), we have this control flow using OpenACC offloading, and a variation of the above where we hoist the loop from the kernel to the caller (converting the routine to a sequential routine). This last variant shows the best performance on NVIDIA GPUs. For OpenMP offloading we adapted this last variant and achieved fairly comparable performance on NVIDIA.
+
+On LUMI, we observed extremely poor performance with the OpenMP offloading variant and started investigating the mapping to control flow units with a very small example, the LITE_LOOP in this repository. It seems the "hoisted" variant does not map very well to AMD GPUs in the first place (both for OpenACC and OpenMP), and the OpenMP performance is reversed between NVIDIA and AMD GPUs.
+
+With the code in this repository, it is possible to investigate the mapping of a simplified physics control flow to GPU execution units. Notably, this does not have the hefty use of temporaries which causes performance bottlenecks in the real code. There are three different variants:
+
+* LITE_LOOP: The original CPU control flow (with the vector dimension innermost)
+* LITE_LOOP_REVERSED: The GPU-tailored control flow with the two inner loops reversed (pulling out parallelism)
+* LITE_LOOP_REVERSED_HOIST: The GPU-tailored control flow where the vector loop is moved to the caller side
+
 ## Test protocol
 
 ```
@@ -216,3 +254,9 @@ $.../phys_mapping/build> export NVCOMPILER_ACC_NOTIFY=1
         </tr>
     </tbody>
 </table>
+
+## Observations
+
+* Hoisting works best on NVIDIA but worst on AMD
+* Launch configuration for hoisting with OpenMP on AMD is strange with NPROMA=64
+* Launch configuration with OpenMP on NVIDIA is strange
