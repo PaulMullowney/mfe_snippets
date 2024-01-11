@@ -86,6 +86,7 @@ if (iargs >= 1) then
 endif
 npoints = nproma  ! Can be unlocked later...
 nblocks = ntotal / nproma
+write(*, *)
 write(*, '(A10,I8,A10,I8,A10,I8,A14,I8,A)') 'NPROMA ', nproma, ' TOTAL ', ntotal, ' NBLOCKS ', nblocks, 'NTHREADS ', nThreads
 
 #ifdef FLOAT32

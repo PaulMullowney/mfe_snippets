@@ -31,9 +31,6 @@ subroutine kernel(dim1,dim2,i1,i2,in1,in2,in3,in4,in5,in6,in7,in8,in9,in10,out1,
   real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1, out1
 
   integer(kind=ip) :: k
-#ifdef OPENACC
-!$acc routine seq
-#endif
   do k=1,dim2
     out1(i,k) = (in1(i,k) + in2(i,k) + in3(i,k) + in4(i,k) + in5(i,k) + &
  &               in6(i,k) + in7(i,k) + in8(i,k) + in9(i,k) + in10(i,k)) * 0.1
@@ -98,6 +95,7 @@ if (iargs >= 1) then
 endif
 npoints = nproma  ! Can be unlocked later...
 nblocks = ntotal / nproma
+write(*, *)
 write(*, '(A10,I8,A10,I8,A10,I8,A14,I8,A)') 'NPROMA ', nproma, ' TOTAL ', ntotal, ' NBLOCKS ', nblocks, ' CASE ', case
 
 #ifdef FLOAT32
@@ -154,23 +152,19 @@ end do
 
 ! Data offload
 #ifdef OMP_DEVICE
-print *, "Number of available devices", omp_get_num_devices()
+write(*, '(A,I)') "Number of available devices ", omp_get_num_devices()
 !$omp target data map(tofrom:arr1) map(to:arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10) map(from:out1)
-#elif defined(OPENACC)
-!$acc data copy(arr1) copyin(arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10) copyout(out1)
 #endif
 
 time1 = omp_get_wtime()
 
-do nml=1,num_main_loops
-
 ! The classic BLOCKED-NPROMA structure from the IFS
-   if (case == 0) then
+if (case == 0) then
+
+   do nml=1,num_main_loops
 
 #if defined(OMP_DEVICE)
 !$omp target teams distribute parallel do collapse(2) thread_limit(__NPROMA__)
-#elif defined(OPENACC)
-!$acc parallel loop gang private(nb, inp, i) vector_length(__NPROMA__)
 #endif
       do nb = 1, nblocks
          do i=1_ip, nproma
@@ -181,12 +175,14 @@ do nml=1,num_main_loops
          end do
       end do
 
-   else if (case == 1) then
+   end do !nml
+
+else if (case == 1) then
+
+   do nml=1,num_main_loops
 
 #if defined(OMP_DEVICE)
 !$omp target teams distribute thread_limit(__NPROMA__)
-#elif defined(OPENACC)
-!$acc parallel loop gang private(nb, inp, i) vector_length(__NPROMA__)
 #endif
       do nb = 1, nblocks
 #if defined(OMP_DEVICE)
@@ -200,12 +196,14 @@ do nml=1,num_main_loops
          end do
       end do
 
-   else
+   end do !nml
+
+else
+
+   do nml=1,num_main_loops
 
 #if defined(OMP_DEVICE)
 !$omp target teams distribute thread_limit(__NPROMA__)
-#elif defined(OPENACC)
-!$acc parallel loop gang private(nb, inp, i) vector_length(__NPROMA__)
 #endif
       do nb = 1, nblocks
          do i=1_ip, nproma
@@ -216,17 +214,15 @@ do nml=1,num_main_loops
          end do
       end do
 
-   endif
+   end do !nml
 
-end do !nml
+endif
 
 time2 = omp_get_wtime()
 dttotal = time2-time1
 
 #ifdef OMP_DEVICE
 !$omp end target data
-#elif OPENACC
-!$acc end data
 #endif
 
 write(*, '(A,3F12.6)') 'Result check : ', arr1(1,1,1), sum(arr1) / real(npoints*nlev*nblocks), sum(out1) / real(npoints*nlev*nblocks)

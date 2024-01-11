@@ -65,7 +65,7 @@ implicit none
 real(kind=lp),dimension(:,:,:),allocatable :: arr1, arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10
 real(kind=lp),dimension(:,:,:),allocatable :: out1
 
-integer(kind=ip) :: nproma, npoints, nlev, nblocks, ntotal, num_main_loops, usesubroutine
+integer(kind=ip) :: nproma, npoints, nlev, nblocks, ntotal, num_main_loops, case
 integer(kind=ip) :: nb, nml, inp, i, k, real_bytes
 real(kind=lp) :: est, dt, dttotal
 
@@ -84,12 +84,12 @@ num_main_loops = 8
 ! Defaults
 nproma = __NPROMA__
 ntotal = 64*16384
-usesubroutine = 1
+case = 1
 
 iargs = command_argument_count()
 if (iargs >= 1) then
    call get_command_argument(1, clarg, lenarg)
-   read(clarg(1:lenarg),*) usesubroutine
+   read(clarg(1:lenarg),*) case
 
    if (iargs >= 2) then
       call get_command_argument(2, clarg, lenarg)
@@ -103,7 +103,8 @@ if (iargs >= 1) then
 endif
 npoints = nproma  ! Can be unlocked later...
 nblocks = ntotal / nproma
-write(*, '(A10,I8,A10,I8,A10,I8,A14,I8,A)') 'NPROMA ', nproma, ' TOTAL ', ntotal, ' NBLOCKS ', nblocks, ' USESUBROUTINE ', usesubroutine
+write(*, *)
+write(*, '(A10,I8,A10,I8,A10,I8,A14,I8,A)') 'NPROMA ', nproma, ' TOTAL ', ntotal, ' NBLOCKS ', nblocks, ' CASE ', case
 
 #ifdef FLOAT32
 real_bytes = 4
@@ -159,25 +160,19 @@ end do
 
 ! Data offload
 #ifdef OMP_DEVICE
-print *, "Number of available devices", omp_get_num_devices()
+write(*, '(A,I)') "Number of available devices ", omp_get_num_devices()
 !$omp target data map(tofrom:arr1) map(to:arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10) map(from:out1)
-#elif defined(OPENACC)
-!$acc data copy(arr1) copyin(arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10) copyout(out1)
 #endif
 
 time1 = omp_get_wtime()
 
-do nml=1,num_main_loops
-
 ! The classic BLOCKED-NPROMA structure from the IFS
-   if (usesubroutine == 0) then
+if (case == 0) then
 
-#ifdef OMP_HOST
-!$omp parallel do schedule(static) default(shared) private(nb,inp)
-#elif defined(OMP_DEVICE)
-!$omp target teams distribute parallel do collapse(2) thread_limit(__NPROMA__)
-#elif defined(OPENACC)
-!$acc parallel loop gang private(nb, inp, i) vector_length(__NPROMA__)
+   do nml=1,num_main_loops
+
+#if defined(OMP_DEVICE)
+!$omp target teams distribute collapse(3) thread_limit(__NPROMA__)
 #endif
       do nb=1,nblocks
          do i=1_ip, nproma
@@ -189,14 +184,71 @@ do nml=1,num_main_loops
          end do
       end do
 
-   else
+   end do !nml
 
-#ifdef OMP_HOST
-!$omp parallel do schedule(static) default(shared) private(nb,inp)
-#elif defined(OMP_DEVICE)
+else if (case == 1) then
+
+   do nml=1,num_main_loops
+
+#if defined(OMP_DEVICE)
+!$omp target teams distribute parallel do collapse(3) thread_limit(__NPROMA__)
+#endif
+      do nb=1,nblocks
+         do i=1_ip, nproma
+            do k=1,nlev
+               out1(i,k,nb) = (arr1(i,k,nb) + arr2(i,k,nb) + arr3(i,k,nb) + arr4(i,k,nb) + arr5(i,k,nb) + &
+                    &                    arr6(i,k,nb) + arr7(i,k,nb) + arr8(i,k,nb) + arr9(i,k,nb) + arr10(i,k,nb)) * 0.1
+               arr1(i,k,nb) = out1(i,k,nb)
+            end do
+         end do
+      end do
+
+   end do !nml
+
+else if (case == 2) then
+
+   do nml=1,num_main_loops
+
+#if defined(OMP_DEVICE)
+!$omp target teams distribute collapse(2) thread_limit(__NPROMA__)
+#endif
+      do nb=1,nblocks
+         do i=1_ip, nproma
+            do k=1,nlev
+               out1(i,k,nb) = (arr1(i,k,nb) + arr2(i,k,nb) + arr3(i,k,nb) + arr4(i,k,nb) + arr5(i,k,nb) + &
+                    &                    arr6(i,k,nb) + arr7(i,k,nb) + arr8(i,k,nb) + arr9(i,k,nb) + arr10(i,k,nb)) * 0.1
+               arr1(i,k,nb) = out1(i,k,nb)
+            end do
+         end do
+      end do
+
+   end do !nml
+
+else if (case == 3) then
+
+   do nml=1,num_main_loops
+
+#if defined(OMP_DEVICE)
+!$omp target teams distribute parallel do collapse(2) thread_limit(__NPROMA__)
+#endif
+      do nb=1,nblocks
+         do i=1_ip, nproma
+            do k=1,nlev
+               out1(i,k,nb) = (arr1(i,k,nb) + arr2(i,k,nb) + arr3(i,k,nb) + arr4(i,k,nb) + arr5(i,k,nb) + &
+                    &                    arr6(i,k,nb) + arr7(i,k,nb) + arr8(i,k,nb) + arr9(i,k,nb) + arr10(i,k,nb)) * 0.1
+               arr1(i,k,nb) = out1(i,k,nb)
+            end do
+         end do
+      end do
+
+   end do !nml
+
+else
+
+   do nml=1,num_main_loops
+
+#if defined(OMP_DEVICE)
 !$omp target teams distribute thread_limit(__NPROMA__)
-#elif defined(OPENACC)
-!$acc parallel loop gang private(nb, inp, i) vector_length(__NPROMA__)
 #endif
       do nb=1,nblocks
          call kernel( nproma, nlev, 1_ip, nproma, arr1(:,:,nb), arr2(:,:,nb), &
@@ -206,9 +258,9 @@ do nml=1,num_main_loops
 
       end do
 
-   endif
+   end do !nml
 
-end do !nml
+endif
 
 time2 = omp_get_wtime()
 dttotal = time2-time1
@@ -216,8 +268,6 @@ dttotal = time2-time1
 
 #ifdef OMP_DEVICE
 !$omp end target data
-#elif OPENACC
-!$acc end data
 #endif
 
 write(*, '(A,3F12.6)') 'Result check : ', arr1(1,1,1), sum(arr1) / real(npoints*nlev*nblocks), sum(out1) / real(npoints*nlev*nblocks)

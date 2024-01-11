@@ -79,7 +79,7 @@ extern "C"
 
 		const int nthreads = *nt;
 		const int nblocks = (N+nthreads-1)/nthreads;
-		printf("N=%d, nblocks=%d\n",N,nblocks);
+		//printf("N=%d, nblocks=%d\n",N,nblocks);
 		auto start = std::chrono::high_resolution_clock::now();
 		phys_kernel<<<nblocks, nthreads>>>(N,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
 		HIP_CALL(hipGetLastError());
