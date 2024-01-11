@@ -1,21 +1,38 @@
-cmake_minimum_required( VERSION 3.25 FATAL_ERROR )
+cmake_minimum_required( VERSION 3.23 FATAL_ERROR )
 
-project( phys_mapping LANGUAGES Fortran )
+project( phys_mapping LANGUAGES CXX Fortran)
 
 find_package( OpenMP COMPONENTS Fortran )
 find_package( OpenACC COMPONENTS Fortran )
+find_package( hip REQUIRED )
 enable_testing()
+set(CMAKE_C_COMPILER "${ROCM_PATH}/bin/hipcc")
+set(CMAKE_CXX_COMPILER "${ROCM_PATH}/bin/hipcc")
+
+add_library(my_hip_lib)
+target_sources(my_hip_lib PRIVATE hip.cpp)
+target_compile_options(my_hip_lib PRIVATE --offload-arch=gfx90a)
+target_link_libraries(my_hip_lib PUBLIC hip::device hip::host)
 
 function( phys_executable )
 
     set( options "" )
-    set( oneValueArgs PHYS_KERNEL PROGRAMMING_MODEL )
+    set( oneValueArgs EXEFILE PHYS_KERNEL PROGRAMMING_MODEL )
     set( multiValueArgs DEFINITIONS LIBS )
     cmake_parse_arguments( _PAR "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-    set( _TARGET phys_${_PAR_PHYS_KERNEL}_${_PAR_PROGRAMMING_MODEL} )
+    set( _TARGET ${_PAR_EXEFILE}_${_PAR_PHYS_KERNEL}_${_PAR_PROGRAMMING_MODEL} )
 
-    add_executable( ${_TARGET} phys_mod.F90 phys_driver.F90 )
+    if( "${_PAR_PROGRAMMING_MODEL}" STREQUAL "hip" )
+	 	 add_executable( ${_TARGET} ${_PAR_EXEFILE}_${_PAR_PHYS_KERNEL}.F90 )
+	 	 set_target_properties( ${_TARGET} PROPERTIES LINKER_LANGUAGE Fortran )
+		 target_link_libraries(${_TARGET}  PRIVATE my_hip_lib)
+    elseif( "${_PAR_EXEFILE}" STREQUAL "driver" )
+	 	 add_executable( ${_TARGET} ${_PAR_EXEFILE}_${_PAR_PHYS_KERNEL}.F90)
+    else()
+	 	 add_executable( ${_TARGET} phys_mod.F90 ${_PAR_EXEFILE}.F90)
+	 endif()
+
 
     target_compile_definitions( ${_TARGET} PRIVATE ${_PAR_PHYS_KERNEL} )
 
@@ -64,6 +81,7 @@ if( TARGET OpenMP::OpenMP_Fortran )
         phys_executable(
             PHYS_KERNEL ${_kernel}
             PROGRAMMING_MODEL openmp
+	         EXEFILE phys_driver
         )
     endforeach()
 endif()
@@ -73,6 +91,7 @@ if( TARGET OpenMP::OpenMP_Fortran )
         phys_executable(
             PHYS_KERNEL ${_kernel}
             PROGRAMMING_MODEL openmp-offload
+	         EXEFILE phys_driver
         )
     endforeach()
 endif()
@@ -82,6 +101,25 @@ if( TARGET OpenACC::OpenACC_Fortran )
         phys_executable(
             PHYS_KERNEL ${_kernel}
             PROGRAMMING_MODEL openacc
+	         EXEFILE phys_driver
         )
     endforeach()
 endif()
+
+if( TARGET OpenMP::OpenMP_Fortran )
+    foreach( _kernel LITE_LOOP LITE_LOOP_REVERSED LITE_LOOP_REVERSED_HOIST )
+        phys_executable(
+            PHYS_KERNEL ${_kernel}
+            PROGRAMMING_MODEL openmp-offload
+	         EXEFILE driver
+        )
+    endforeach()
+endif()
+
+foreach( _kernel LITE_LOOP_HIP )
+	phys_executable(
+      PHYS_KERNEL ${_kernel}
+      PROGRAMMING_MODEL hip
+      EXEFILE driver
+   )
+endforeach()
