@@ -51,6 +51,9 @@ use omp_lib
 
 use mod, only: ip, lp, kernel
 
+USE iso_c_binding   ,ONLY : c_null_char
+use hip_profiling, only : roctxRangePushA, roctxRangePop, roctxMarkA
+
 implicit none
 
 !! arrays for passing to subroutine
@@ -61,7 +64,7 @@ integer(kind=ip) :: nproma, npoints, nlev, nblocks, ntotal, num_main_loops, case
 integer(kind=ip) :: nb, nml, inp, i, k, real_bytes
 real(kind=lp) :: est, dt, dttotal
 
-integer :: i_seed
+integer :: i_seed, ret
 integer, dimension(:), allocatable :: a_seed
 
 integer :: iargs, lenarg
@@ -159,10 +162,11 @@ write(*, '(A,I)') "Number of available devices ", omp_get_num_devices()
 time1 = omp_get_wtime()
 
 ! The classic BLOCKED-NPROMA structure from the IFS
-if (case == 0) then
+if (case == 1) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 1"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute parallel do collapse(2) thread_limit(__NPROMA__)
 #endif
@@ -175,12 +179,16 @@ if (case == 0) then
          end do
       end do
 
+     call roctxRangePop()
+     call roctxMarkA("Kernel Case 1"//c_null_char)
+
    end do !nml
 
-else if (case == 1) then
+else if (case == 2) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 2"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute thread_limit(__NPROMA__)
 #endif
@@ -196,12 +204,16 @@ else if (case == 1) then
          end do
       end do
 
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 2"//c_null_char)
+
    end do !nml
 
-else
+else if (case == 3) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 3"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute thread_limit(__NPROMA__)
 #endif
@@ -213,6 +225,9 @@ else
                  &           arr9(:,:,nb), arr10(:,:,nb), out1(:,:,nb), i )
          end do
       end do
+
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 3"//c_null_char)
 
    end do !nml
 

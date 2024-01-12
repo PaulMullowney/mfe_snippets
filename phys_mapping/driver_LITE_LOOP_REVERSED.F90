@@ -31,10 +31,7 @@ subroutine kernel(dim1,dim2,i1,i2,in1,in2,in3,in4,in5,in6,in7,in8,in9,in10,out1)
   real(kind=lp),dimension(1:dim1,1:dim2),intent(inout) :: in1, out1
 
   integer(kind=ip) :: i,k
-#ifdef OPENACC
-!$acc routine vector
-!$acc loop vector private(i, k)
-#elif defined(OMP_DEVICE)
+#if defined(OMP_DEVICE)
 !$omp parallel do simd
 #endif
   do i=i1,i2
@@ -59,6 +56,9 @@ use omp_lib
 
 use mod, only: ip, lp, kernel
 
+USE iso_c_binding   ,ONLY : c_null_char
+use hip_profiling, only : roctxRangePushA, roctxRangePop, roctxMarkA
+
 implicit none
 
 !! arrays for passing to subroutine
@@ -69,7 +69,7 @@ integer(kind=ip) :: nproma, npoints, nlev, nblocks, ntotal, num_main_loops, case
 integer(kind=ip) :: nb, nml, inp, i, k, real_bytes
 real(kind=lp) :: est, dt, dttotal
 
-integer :: i_seed
+integer :: i_seed, ret
 integer, dimension(:), allocatable :: a_seed
 
 integer :: iargs, lenarg
@@ -167,10 +167,11 @@ write(*, '(A,I)') "Number of available devices ", omp_get_num_devices()
 time1 = omp_get_wtime()
 
 ! The classic BLOCKED-NPROMA structure from the IFS
-if (case == 0) then
+if (case == 1) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 1"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute collapse(3) thread_limit(__NPROMA__)
 #endif
@@ -184,12 +185,16 @@ if (case == 0) then
          end do
       end do
 
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 1"//c_null_char)
+
    end do !nml
 
-else if (case == 1) then
+else if (case == 2) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 2"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute parallel do collapse(3) thread_limit(__NPROMA__)
 #endif
@@ -203,12 +208,16 @@ else if (case == 1) then
          end do
       end do
 
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 2"//c_null_char)
+
    end do !nml
 
-else if (case == 2) then
+else if (case == 3) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 3"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute collapse(2) thread_limit(__NPROMA__)
 #endif
@@ -222,12 +231,16 @@ else if (case == 2) then
          end do
       end do
 
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 3"//c_null_char)
+
    end do !nml
 
-else if (case == 3) then
+else if (case == 4) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 4"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute parallel do collapse(2) thread_limit(__NPROMA__)
 #endif
@@ -241,12 +254,16 @@ else if (case == 3) then
          end do
       end do
 
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 4"//c_null_char)
+
    end do !nml
 
-else
+else if (case==5) then
 
    do nml=1,num_main_loops
 
+      ret = roctxRangePushA("Kernel Case 5"//c_null_char)
 #if defined(OMP_DEVICE)
 !$omp target teams distribute thread_limit(__NPROMA__)
 #endif
@@ -257,6 +274,9 @@ else
               &           arr9(:,:,nb), arr10(:,:,nb), out1(:,:,nb) )
 
       end do
+
+      call roctxRangePop()
+      call roctxMarkA("Kernel Case 5"//c_null_char)
 
    end do !nml
 
