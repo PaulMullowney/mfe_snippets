@@ -1,5 +1,6 @@
 #include <chrono>
 #include "hip/hip_runtime.h"
+#include <roctracer/roctx.h>
 
 #define HIP_CALL(call)                                   \
 	do {                                                  \
@@ -78,7 +79,7 @@ extern "C"
 	{
 		double *din1, *din2, *din3, *din4, *din5, *din6, *din7, *din8, *din9, *din10, *dout1;
 		int N = (*dim1)*(*dim2)*(*dim3);
-		printf("dim1=%d, dim2=%d, dim3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*dim1,*dim2,*dim3,*in1,*(in1+1));
+		//printf("dim1=%d, dim2=%d, dim3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*dim1,*dim2,*dim3,*in1,*(in1+1));
 		HIP_CALL(hipMalloc((void**)&din1, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din2, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din3, N*sizeof(double)));
@@ -106,7 +107,10 @@ extern "C"
 		const int nblocks = (N+nthreads-1)/nthreads;
 		//printf("N=%d, nblocks=%d\n",N,nblocks);
 		auto start = std::chrono::high_resolution_clock::now();
+		roctxRangePush("lite_loop_hip_kernel");
 		lite_loop_hip_kernel<<<nblocks, nthreads>>>(N,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
+		roctxRangePop();
+		roctxMarkA("lite_loop_hip_kernel");
 		HIP_CALL(hipGetLastError());
 		HIP_CALL(hipDeviceSynchronize());
 
@@ -145,7 +149,7 @@ extern "C"
 	{
 		double *din1, *din2, *din3, *din4, *din5, *din6, *din7, *din8, *din9, *din10, *dout1;
 		int N = (*dim1)*(*dim2)*(*dim3);
-		printf("dim1=%d, dim2=%d, dim3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*dim1,*dim2,*dim3,*in1,*(in1+1));
+		//printf("dim1=%d, dim2=%d, dim3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*dim1,*dim2,*dim3,*in1,*(in1+1));
 		HIP_CALL(hipMalloc((void**)&din1, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din2, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din3, N*sizeof(double)));
@@ -173,7 +177,10 @@ extern "C"
 		const int nblocks = *dim3;
 		//printf("N=%d, nblocks=%d\n",N,nblocks);
 		auto start = std::chrono::high_resolution_clock::now();
+		roctxRangePush("lite_loop_reversed_hip_kernel");
 		lite_loop_reversed_hip_kernel<<<nblocks, nthreads>>>(*dim1,*dim2,*dim3,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
+		roctxRangePop();
+		roctxMarkA("lite_loop_reversed_hip_kernel");
 		HIP_CALL(hipGetLastError());
 		HIP_CALL(hipDeviceSynchronize());
 
