@@ -117,7 +117,7 @@ if( TARGET OpenMP::OpenMP_Fortran )
     endforeach()
 endif()
 
-foreach( _kernel LITE_LOOP_HIP )
+foreach( _kernel LITE_LOOP_HIP LITE_LOOP_REVERSED_HIP )
 	phys_executable(
       PHYS_KERNEL ${_kernel}
       PROGRAMMING_MODEL hip
