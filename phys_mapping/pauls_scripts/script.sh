@@ -1,4 +1,20 @@
 #!/bin/bash -l
+#
+# This script can be used to single runs, groups of runs, profiles with rocprof, or profiles with omniperf.
+# To use, copy this into the build directory and run via:
+# ./script.sh -exe=VERSION -offload=OFFLOAD -cce=CCE_VERSION -arg2=ARG2 -case=CASE -cray_acc_debug=CRAY_ACC_DEBUG -oprof -rprof
+#
+# -exe=VERSION: LITE_LOOP, LITE_LOOP_HIP, LITE_LOOP_REVERSED, LITE_LOOP_REVERSED_HIP, LITE_LOOP_REVERSED_HOIST
+# -offload=OFFLOAD: openmp-offload, hip, openmpi-offload, hip, openmp-offload
+#          These match the version strings above
+# -cce=CCE: 16.0.0 or whatever you build with. This variable is used for loading the right modules and creating profile names
+# -arg2=ARG2 (optional): y dimension of the threadblock for LITE_LOOP_REVERSED_HIP
+# -case=CASE (optional): depends on the VERSION, OFFLOAD. Read the code below. This is useful for running single cases of each exe.
+# -cray_acc_debug=CRAY_ACC_DEBUG (optional): useful for seeing how OpenMP kernels are launched. Use -case argument with an -offload=openmp-offload
+# -oprof (optional): run omniperf on a single case or all cases for VERSION/OFFLOAD
+# -rprof (optional): run rocprof on a single case or all cases for VERSION/OFFLOAD
+#
+#
 oprofile=
 rprofile=
 cray_acc_debug=0
