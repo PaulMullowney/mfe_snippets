@@ -18,13 +18,13 @@ integer, parameter :: ip = INT32
 
 INTERFACE
 
-   SUBROUTINE phys_kernel_lite_loop_reversed_hip(dim1,dim2,dim3,i1,i2,nt,in1,in2,in3,in4,in5,in6,in7,in8,in9,in10,out1,dt) BIND(C)
+   SUBROUTINE phys_kernel_lite_loop_reversed_hip(DIM1,DIM2,DIM3,i1,i2,ntx,nty,in1,in2,in3,in4,in5,in6,in7,in8,in9,in10,out1,dt) BIND(C)
      USE, INTRINSIC :: ISO_C_BINDING
      !USE phys_mod, ONLY: ip, lp
      !IMPLICIT NONE
-     integer(4),intent(in) :: dim1, dim2, dim3, i1, i2, nt
-     real(8),dimension(1:dim1,1:dim2,1:dim3),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
-     real(8),dimension(1:dim1,1:dim2,1:dim3),intent(inout) :: in1, out1
+     integer(4),intent(in) :: DIM1, DIM2, DIM3, i1, i2, ntx,nty
+     real(8),dimension(1:DIM1,1:DIM2,1:DIM3),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+     real(8),dimension(1:DIM1,1:DIM2,1:DIM3),intent(inout) :: in1, out1
      real(8),intent(inout) :: dt
    END SUBROUTINE phys_kernel_lite_loop_reversed_hip
 END INTERFACE
@@ -48,7 +48,7 @@ implicit none
 real(kind=lp),dimension(:,:,:),allocatable :: arr1, arr2, arr3, arr4, arr5, arr6, arr7, arr8, arr9, arr10
 real(kind=lp),dimension(:,:,:),allocatable :: out1
 
-integer(kind=ip) :: nproma, npoints, nlev, nblocks, ntotal, num_main_loops, nThreads
+integer(kind=ip) :: nproma, npoints, nlev, nblocks, ntotal, num_main_loops, nThreadsX, nThreadsY
 integer(kind=ip) :: nb, nml, inp, i, k, real_bytes
 real(kind=lp) :: est, dt, dttotal
 
@@ -67,27 +67,33 @@ num_main_loops = 8
 ! Defaults
 nproma = __NPROMA__
 ntotal = 64*16384
-nThreads = 1
+nThreadsX = 64
+nThreadsY = 1
 
 iargs = command_argument_count()
 if (iargs >= 1) then
    call get_command_argument(1, clarg, lenarg)
-   read(clarg(1:lenarg),*) nThreads
+   read(clarg(1:lenarg),*) nThreadsX
 
    if (iargs >= 2) then
       call get_command_argument(2, clarg, lenarg)
-      read(clarg(1:lenarg),*) nproma
+      read(clarg(1:lenarg),*) nThreadsY
 
       if (iargs >= 3) then
          call get_command_argument(3, clarg, lenarg)
-         read(clarg(1:lenarg),*) ntotal
+         read(clarg(1:lenarg),*) nproma
+
+         if (iargs >= 4) then
+            call get_command_argument(4, clarg, lenarg)
+            read(clarg(1:lenarg),*) ntotal
+         endif
       endif
    endif
 endif
 npoints = nproma  ! Can be unlocked later...
 nblocks = ntotal / nproma
 write(*, *)
-write(*, '(A10,I8,A10,I8,A10,I8,A14,I8,A)') 'NPROMA ', nproma, ' TOTAL ', ntotal, ' NBLOCKS ', nblocks, 'NTHREADS ', nThreads
+write(*, '(A10,I8,A10,I8,A10,I8,A14,I8,A,I8,A)') 'NPROMA ', nproma, ' TOTAL ', ntotal, ' NBLOCKS ', nblocks, ' NTHREADSX ', nThreadsX, ' NTHREADSY ', nThreadsY
 
 #ifdef FLOAT32
 real_bytes = 4
@@ -143,7 +149,7 @@ end do
 
 do nml=1,num_main_loops
 
-    call phys_kernel_lite_loop_reversed_hip( nproma, nlev, nblocks, 1_ip, nproma, nthreads, arr1(:,:,:), arr2(:,:,:), &
+    call phys_kernel_lite_loop_reversed_hip( nproma, nlev, nblocks, 1_ip, nproma, nThreadsX, nThreadsY, arr1(:,:,:), arr2(:,:,:), &
     &                  arr3(:,:,:), arr4(:,:,:), arr5(:,:,:), &
     &                  arr6(:,:,:), arr7(:,:,:), arr8(:,:,:), &
     &                  arr9(:,:,:), arr10(:,:,:), out1(:,:,:), dt)

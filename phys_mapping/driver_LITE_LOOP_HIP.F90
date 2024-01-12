@@ -18,13 +18,13 @@ integer, parameter :: ip = INT32
 
 INTERFACE
 
-   SUBROUTINE phys_kernel_lite_loop_hip(dim1,dim2,dim3,i1,i2,nt,in1,in2,in3,in4,in5,in6,in7,in8,in9,in10,out1,dt) BIND(C)
+   SUBROUTINE phys_kernel_lite_loop_hip(DIM1,DIM2,DIM3,i1,i2,nt,in1,in2,in3,in4,in5,in6,in7,in8,in9,in10,out1,dt) BIND(C)
      USE, INTRINSIC :: ISO_C_BINDING
      !USE phys_mod, ONLY: ip, lp
      !IMPLICIT NONE
-     integer(4),intent(in) :: dim1, dim2, dim3, i1, i2, nt
-     real(8),dimension(1:dim1,1:dim2,1:dim3),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
-     real(8),dimension(1:dim1,1:dim2,1:dim3),intent(inout) :: in1, out1
+     integer(4),intent(in) :: DIM1, DIM2, DIM3, i1, i2, nt
+     real(8),dimension(1:DIM1,1:DIM2,1:DIM3),intent(in) :: in2,in3,in4,in5,in6,in7,in8,in9,in10
+     real(8),dimension(1:DIM1,1:DIM2,1:DIM3),intent(inout) :: in1, out1
      real(8),intent(inout) :: dt
    END SUBROUTINE phys_kernel_lite_loop_hip
 END INTERFACE

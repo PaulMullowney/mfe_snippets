@@ -36,7 +36,7 @@ __global__ void lite_loop_hip_kernel(const int N,
 }
 
 __global__ void lite_loop_reversed_hip_kernel(const int nproma,
-															 const int nlev, const int nblocks,
+															 const int nlev,
 															 double * __restrict__ in1,
 															 const double * __restrict__ in2,
 															 const double * __restrict__ in3,
@@ -50,7 +50,7 @@ __global__ void lite_loop_reversed_hip_kernel(const int nproma,
 															 double * __restrict__ out1)
 {
 
-	int tid = threadIdx.x + blockIdx.x*nproma*nlev; 
+	int tid = threadIdx.x + (blockIdx.x*blockDim.y+threadIdx.y)*nproma*nlev; 
 	for (int k=0; k<nlev; ++k)
 	{
 		out1[tid] = (in1[tid] + in2[tid] + in3[tid] + in4[tid] + in5[tid] +
@@ -62,7 +62,7 @@ __global__ void lite_loop_reversed_hip_kernel(const int nproma,
 
 extern "C"
 {
-	void phys_kernel_lite_loop_hip ( int* dim1, int* dim2, int* dim3,
+	void phys_kernel_lite_loop_hip ( int* DIM1, int* DIM2, int* DIM3,
 												int* i1, int* i2, int * nt,
 												double * in1,
 												double * in2,
@@ -78,8 +78,8 @@ extern "C"
 												double * dt)
 	{
 		double *din1, *din2, *din3, *din4, *din5, *din6, *din7, *din8, *din9, *din10, *dout1;
-		int N = (*dim1)*(*dim2)*(*dim3);
-		//printf("dim1=%d, dim2=%d, dim3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*dim1,*dim2,*dim3,*in1,*(in1+1));
+		int N = (*DIM1)*(*DIM2)*(*DIM3);
+		//printf("DIM1=%d, DIM2=%d, DIM3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*DIM1,*DIM2,*DIM3,*in1,*(in1+1));
 		HIP_CALL(hipMalloc((void**)&din1, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din2, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din3, N*sizeof(double)));
@@ -132,8 +132,8 @@ extern "C"
 		HIP_CALL(hipFree(din10));
 		HIP_CALL(hipFree(dout1));
 	}
-	void phys_kernel_lite_loop_reversed_hip ( int* dim1, int* dim2, int* dim3,
-															int* i1, int* i2, int * nt,
+	void phys_kernel_lite_loop_reversed_hip ( int* DIM1, int* DIM2, int* DIM3,
+															int* i1, int* i2, int * ntx, int * nty,
 															double * in1,
 															double * in2,
 															double * in3,
@@ -148,8 +148,8 @@ extern "C"
 															double * dt)
 	{
 		double *din1, *din2, *din3, *din4, *din5, *din6, *din7, *din8, *din9, *din10, *dout1;
-		int N = (*dim1)*(*dim2)*(*dim3);
-		//printf("dim1=%d, dim2=%d, dim3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*dim1,*dim2,*dim3,*in1,*(in1+1));
+		int N = (*DIM1)*(*DIM2)*(*DIM3);
+		//printf("DIM1=%d, DIM2=%d, DIM3=%d, in1(1,1,1)=%1.15g, in1(1,1,2)=%1.15g\n",*DIM1,*DIM2,*DIM3,*in1,*(in1+1));
 		HIP_CALL(hipMalloc((void**)&din1, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din2, N*sizeof(double)));
 		HIP_CALL(hipMalloc((void**)&din3, N*sizeof(double)));
@@ -173,12 +173,12 @@ extern "C"
 		HIP_CALL(hipMemcpy(din10,in10,N*sizeof(double),hipMemcpyHostToDevice));
 		HIP_CALL(hipMemcpy(dout1,out1,N*sizeof(double),hipMemcpyHostToDevice));
 
-		const int nthreads = *nt;
-		const int nblocks = *dim3;
+		struct dim3 grid(*DIM3/(*nty), 1, 1);
+		struct dim3 block((*ntx), (*nty), 1);
 		//printf("N=%d, nblocks=%d\n",N,nblocks);
 		auto start = std::chrono::high_resolution_clock::now();
 		roctxRangePush("lite_loop_reversed_hip_kernel");
-		lite_loop_reversed_hip_kernel<<<nblocks, nthreads>>>(*dim1,*dim2,*dim3,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
+		lite_loop_reversed_hip_kernel<<<grid, block>>>(*DIM1,*DIM2,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
 		roctxRangePop();
 		roctxMarkA("lite_loop_reversed_hip_kernel");
 		HIP_CALL(hipGetLastError());
