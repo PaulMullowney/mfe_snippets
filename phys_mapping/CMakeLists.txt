@@ -11,7 +11,7 @@ set(CMAKE_CXX_COMPILER "${ROCM_PATH}/bin/hipcc")
 
 add_library(my_hip_lib)
 target_sources(my_hip_lib PRIVATE hip.cpp)
-target_compile_options(my_hip_lib PRIVATE --offload-arch=gfx90a)
+target_compile_options(my_hip_lib PRIVATE --save-temps)
 target_link_libraries(my_hip_lib PUBLIC hip::device hip::host)
 
 function( phys_executable )

@@ -29,12 +29,14 @@ __global__ void lite_loop_hip_kernel(const int N,
 	int tid = threadIdx.x + blockIdx.x*blockDim.x;
 	if (tid<N)
 	{
-		out1[tid] = (in1[tid] + in2[tid] + in3[tid] + in4[tid] + in5[tid] +
+		double t = (in1[tid] + in2[tid] + in3[tid] + in4[tid] + in5[tid] +
 						 in6[tid] + in7[tid] + in8[tid] + in9[tid] + in10[tid])*0.1;
-		in1[tid] = out1[tid];
+		in1[tid] = t;
+	   out1[tid] = t;
 	}
 }
 
+template<bool THREAD_BLOCK_2D, int UNROLL>
 __global__ void lite_loop_reversed_hip_kernel(const int nproma,
 															 const int nlev,
 															 double * __restrict__ in1,
@@ -49,13 +51,19 @@ __global__ void lite_loop_reversed_hip_kernel(const int nproma,
 															 const double * __restrict__ in10,
 															 double * __restrict__ out1)
 {
+	int tid;
+	if (THREAD_BLOCK_2D)
+		tid = threadIdx.x + (blockIdx.x*blockDim.y+threadIdx.y)*nlev*nproma;
+	else
+		tid = threadIdx.x + blockIdx.x*nlev*nproma;
 
-	int tid = threadIdx.x + (blockIdx.x*blockDim.y+threadIdx.y)*nproma*nlev; 
+	#pragma unroll UNROLL
 	for (int k=0; k<nlev; ++k)
 	{
-		out1[tid] = (in1[tid] + in2[tid] + in3[tid] + in4[tid] + in5[tid] +
-						 in6[tid] + in7[tid] + in8[tid] + in9[tid] + in10[tid])*0.1;
-		in1[tid] = out1[tid];
+ 		double t = (in1[tid] + in2[tid] + in3[tid] + in4[tid] + in5[tid] +
+						in6[tid] + in7[tid] + in8[tid] + in9[tid] + in10[tid])*0.1;
+		in1[tid] = t;
+      out1[tid] = t;
 		tid+=nproma;
 	}
 }
@@ -173,12 +181,19 @@ extern "C"
 		HIP_CALL(hipMemcpy(din10,in10,N*sizeof(double),hipMemcpyHostToDevice));
 		HIP_CALL(hipMemcpy(dout1,out1,N*sizeof(double),hipMemcpyHostToDevice));
 
-		struct dim3 grid(*DIM3/(*nty), 1, 1);
-		struct dim3 block((*ntx), (*nty), 1);
 		//printf("N=%d, nblocks=%d\n",N,nblocks);
 		auto start = std::chrono::high_resolution_clock::now();
 		roctxRangePush("lite_loop_reversed_hip_kernel");
-		lite_loop_reversed_hip_kernel<<<grid, block>>>(*DIM1,*DIM2,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
+
+		struct dim3 grid(*DIM3/(*nty), 1, 1);
+		struct dim3 block((*ntx), (*nty), 1);
+		if ((*nty)==1)
+			lite_loop_reversed_hip_kernel<false,2><<<grid, block>>>
+				(*DIM1,*DIM2,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
+		else
+			lite_loop_reversed_hip_kernel<true,2><<<grid, block>>>
+				(*DIM1,*DIM2,din1,din2,din3,din4,din5,din6,din7,din8,din9,din10,dout1);
+
 		roctxRangePop();
 		roctxMarkA("lite_loop_reversed_hip_kernel");
 		HIP_CALL(hipGetLastError());
