@@ -21,17 +21,19 @@ module_unload() {
 }
 
 # Unload to be certain
-module reset
+#module reset
 
 # Load modules
-module load PrgEnv-cray
-module load cpe/23.05
-module load rocm/5.4.3
-#module load rocm/5.5.1
-#module load rocm/5.6.0
+# 16.0.1
+module load cpe/23.09
+module load rocm/5.7.1
+
+# 16.0.0
+#module load cpe/23.05
+#module load rocm/5.4.3
+
 module load craype-accel-amd-gfx90a
-module load cray-hdf5/1.12.2.3
-module load boost/1.79.0
+module load cray-hdf5/1.12.2.7
 module load cmake/3.23.2
 module list
 

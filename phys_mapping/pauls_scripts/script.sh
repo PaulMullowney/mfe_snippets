@@ -8,7 +8,8 @@
 # -offload=OFFLOAD: openmp-offload, hip, openmpi-offload, hip, openmp-offload
 #          These match the version strings above
 # -cce=CCE: 16.0.0 or whatever you build with. This variable is used for loading the right modules and creating profile names
-# -arg2=ARG2 (optional): y dimension of the threadblock for LITE_LOOP_REVERSED_HIP
+# -arg2=ARG2 (optional): y dimension of the threadblock for LITE_LOOP_REVERSED_HIP.
+#            When using OpenMP offload, this should be 64, 128, 256, ... (i.e. the size of the 2nd loop or the thread blocks size in the generated kernel).
 # -case=CASE (optional): depends on the VERSION, OFFLOAD. Read the code below. This is useful for running single cases of each exe.
 # -cray_acc_debug=CRAY_ACC_DEBUG (optional): useful for seeing how OpenMP kernels are launched. Use -case argument with an -offload=openmp-offload
 # -oprof (optional): run omniperf on a single case or all cases for VERSION/OFFLOAD
