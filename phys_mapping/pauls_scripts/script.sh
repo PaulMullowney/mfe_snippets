@@ -67,11 +67,12 @@ module load PrgEnv-cray
 if [[ $cce == "16.0.1" ]]
 then
 	 module load cpe/23.09
+	 module load rocm/5.7.1
 else
 	 module load cpe/23.05
+	 module load rocm/5.4.3
 	 #	 GCC_X86_64=/opt/cray/pe/gcc/12.2.0/snos
 fi
-module load rocm/5.4.3
 module load craype-accel-amd-gfx90a
 module unload darshan-runtime
 
